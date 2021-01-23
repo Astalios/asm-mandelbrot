@@ -85,7 +85,7 @@ main:
                 imul eax, 2
                 imul eax, [tmp]
                 add eax, [c_i]
-                ;mov [z_i], eax ; doesn't work
+                mov [z_i], eax ; doesn't work
                 
                 
                 ; i++
@@ -98,16 +98,23 @@ main:
 				mov ebx, [z_i]
 				imul ebx, ebx
 				add eax, ebx
+
+                cmp eax, 4
+                jge loopend
 				
 				; i < iteration_max
 				; ...
 				
-				cmp eax, 4
-				jle loop3
+				cmp eax, [iteration_max]
+				jge loopend
                 
+            loopend:
+            
             ; if (i == iteration_max)
+            cmp eax, [iteration_max]
             
                 ; draw the pixel at x, y (aka call a function)
+                ;je dessin
             
             ; y < image_y
             cmp si, [image_y] ; Compare cx to the limit

@@ -42,14 +42,30 @@ height:        	resd	1
 window:		resq	1
 gc:		resq	1
 
+x       resd 0
+y       resd 0
+
+c_r     resd 0
+c_i     resd 0
+z_r     resd 0
+z_i     resq 0
+i       resd 0
+
+tmp     resd 0
+
+image_x resd 0
+image_y resd 0
+
 section .data
 
 event:		times	24 dq 0
 
-x1:	dd	0
-x2:	dd	0
-y1:	dd	0
-y2:	dd	0
+x1              dd -2.1
+x2              dd  0.6
+y1              dd -1.2
+y2              dd  1.2
+zoom            dd  100
+iteration_max   dd  50
 
 section .text
 	
@@ -111,7 +127,7 @@ mov rsi,event
 call XNextEvent
 
 cmp dword[event],ConfigureNotify	; à l'apparition de la fenêtre
-je dessin							; on saute au label 'dessin'
+je drawing							; on saute au label 'dessin'
 
 cmp dword[event],KeyPress			; Si on appuie sur une touche
 je closeDisplay						; on saute au label 'closeDisplay' qui ferme la fenêtre
@@ -128,10 +144,10 @@ mov rsi,qword[gc]
 mov edx,0xFF0000	; Couleur du crayon ; rouge
 call XSetForeground
 ; coordonnées de la ligne 1
-mov dword[x1],50
-mov dword[y1],50
-mov dword[x2],200
-mov dword[y2],350
+;mov dword[x1],50
+;mov dword[y1],50
+;mov dword[x2],200
+;mov dword[y2],350
 ; dessin de la ligne 1
 mov rdi,qword[display_name]
 mov rsi,qword[window]
@@ -142,65 +158,127 @@ mov r9d,dword[x2]	; coordonnée destination en x
 push qword[y2]		; coordonnée destination en y
 call XDrawLine
 
-;couleur de la ligne 2
-mov rdi,qword[display_name]
-mov rsi,qword[gc]
-mov edx,0x00FF00	; Couleur du crayon ; vert
-call XSetForeground
-; coordonnées de la ligne 2
-mov dword[x1],50
-mov dword[y1],350
-mov dword[x2],200
-mov dword[y2],50
-; dessin de la ligne 2
-mov rdi,qword[display_name]
-mov rsi,qword[window]
-mov rdx,qword[gc]
-mov ecx,dword[x1]	; coordonnée source en x
-mov r8d,dword[y1]	; coordonnée source en y
-mov r9d,dword[x2]	; coordonnée destination en x
-push qword[y2]		; coordonnée destination en y
-call XDrawLine
+drawing:
+    ; image_x = (x2 - x1) * zoom
+    mov eax, [x2]
+    sub eax, [x1]
+    imul eax, [zoom]
+    mov [image_x], eax
+    
+    ; image_y = (y2 - y1) * zoom
+    mov eax, [y2]
+    sub eax, [y1]
+    imul eax, [zoom]
+    mov [image_y], eax
+    
+    ; for (x = 0; x < image_x; x++)
+    xor cx, cx ; set x to 0
+    
+    loop1:
+        nop
+        ; x++
+        inc cx
+        
+        ; inside the first loop
+        
+        ; for (y = 0; y < image_y; y++)
+        xor si, si
+        
+        loop2:
+            nop
+            ; y++
+            inc si
+            
+            ; inside the second loop
+            
+            ; c_r = x / zoom + x1
+            mov ax, [x]
+            mov bx, [zoom]
+            xor dx, dx
+            div bx ; ax=résultat(dx:ax/bx), dx=reste(dx:ax/bx) :
+            add ax, [x1]
+            mov [c_r], ax
+            
+            ; c_i = y / zoom + y1
+            mov ax, [y]
+            mov bx, [zoom]
+            xor dx, dx
+            div bx
+            add ax, [y1]
+            mov [c_i], ax
+            
+            ; z_r = 0
+            mov [z_r], dword 0
+            
+            ; z_i = 0
+            mov [z_i], dword 0
+            
+            ; i = 0
+            xor di, di
+            
+            ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
+			mov ax, 1
+			loop3:
+				nop
+				
+				; inside while loop
+				
+                ; tmp = z_r
+                mov [tmp], dword z_r
+                
+                ; z_r = z_r * z_r - z_i * z_i + c_r
+				mov eax, [z_r]
+				imul eax, eax
+				mov ebx, [z_i]
+				imul ebx, ebx
+				sub eax, ebx
+				add eax, [c_r]
+				mov [z_r], eax
+                
+                ; z_i = 2 * z_i * tmp + c_i
+                mov eax, [z_i]
+                imul eax, 2
+                imul eax, [tmp]
+                add eax, [c_i]
+                mov [z_i], eax ; doesn't work
+                
+                
+                ; i++
+                inc di
+				
+				; loop condition
+				; z_r * z_r + z_i * z_i < 4
+				mov eax, [z_r]
+				imul eax, eax
+				mov ebx, [z_i]
+				imul ebx, ebx
+				add eax, ebx
 
-;couleur de la ligne 3
-mov rdi,qword[display_name]
-mov rsi,qword[gc]
-mov edx,0x0000FF	; Couleur du crayon ; bleu
-call XSetForeground
-; coordonnées de la ligne 3	
-mov dword[x1],275
-mov dword[y1],50
-mov dword[x2],275
-mov dword[y2],350
-; dessin de la ligne 3
-mov rdi,qword[display_name]
-mov rsi,qword[window]
-mov rdx,qword[gc]
-mov ecx,dword[x1]	; coordonnée source en x
-mov r8d,dword[y1]	; coordonnée source en y
-mov r9d,dword[x2]	; coordonnée destination en x
-push qword[y2]		; coordonnée destination en y
-call XDrawLine
+                cmp eax, 4
+                jge loopend
+				
+				; i < iteration_max
+				; ...
+				
+				cmp eax, [iteration_max]
+				jge loopend
+                
+            loopend:
 
-;couleur de la ligne 4
-mov rdi,qword[display_name]
-mov rsi,qword[gc]
-mov edx,0xFF00FF	; Couleur du crayon ; violet
-call XSetForeground
-; coordonnées de la ligne 4	
-mov dword[x1],350
-mov dword[y1],50
-mov dword[x2],350
-mov dword[y2],350
-; dessin de la ligne 4
-mov rdi,qword[display_name]
-mov rsi,qword[window]
-mov rdx,qword[gc]
-mov ecx,dword[x1]	; coordonnée source en x
-mov r8d,dword[y1]	; coordonnée source en y
-mov r9d,dword[x2]	; coordonnée destination en x
-push qword[y2]		; coordonnée destination en y
-call XDrawLine
+            ; if (i == iteration_max)
+            cmp eax, [iteration_max]
+            
+                ; draw the pixel at x, y (aka call a function)
+                je dessin
+            
+            ; y < image_y
+            cmp si, [image_y] ; Compare cx to the limit
+            jle loop2
+            
+        
+        ; x < image_x
+        cmp cx, [image_x] ; Compare cx to the limit
+        jle loop1
 
 ; ############################
 ; # FIN DE LA ZONE DE DESSIN #
