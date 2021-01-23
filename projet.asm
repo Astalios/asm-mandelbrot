@@ -1,27 +1,19 @@
 section .text
 
-global _start
-
-section .data
-    x1              dd -2.1
-    x2              dd  0.6
-    y1              dd -1.2
-    y2              dd  1.2
-    zoom            dd  100
-    iteration_max   dd  50
+global main
     
 
-_start:
+main:
     ; image_x = (x2 - x1) * zoom
-    mov eax, x2
-    sub eax, x1
-    imul eax, zoom
+    mov eax, [x2]
+    sub eax, [x1]
+    imul eax, [zoom]
     mov [image_x], eax
     
     ; image_y = (y2 - y1) * zoom
-    mov eax, y2
-    sub eax, y1
-    imul eax, zoom
+    mov eax, [y2]
+    sub eax, [y1]
+    imul eax, [zoom]
     mov [image_y], eax
     
     ; for (x = 0; x < image_x; x++)
@@ -80,9 +72,9 @@ _start:
                 mov [tmp], dword z_r
                 
                 ; z_r = z_r * z_r - z_i * z_i + c_r
-				mov eax, z_r
+				mov eax, [z_r]
 				imul eax, eax
-				mov ebx, z_i
+				mov ebx, [z_i]
 				imul ebx, ebx
 				sub eax, ebx
 				add eax, [c_r]
@@ -101,9 +93,9 @@ _start:
 				
 				; loop condition
 				; z_r * z_r + z_i * z_i < 4
-				mov eax, z_r
+				mov eax, [z_r]
 				imul eax, eax
-				mov ebx, z_i
+				mov ebx, [z_i]
 				imul ebx, ebx
 				add eax, ebx
 				
@@ -126,6 +118,15 @@ _start:
         cmp cx, [image_x] ; Compare cx to the limit
         jle loop1
     
+
+section .data
+    x1              dd -2.1
+    x2              dd  0.6
+    y1              dd -1.2
+    y2              dd  1.2
+    zoom            dd  100
+    iteration_max   dd  50
+
 
 segment .bss
     x       resd 0

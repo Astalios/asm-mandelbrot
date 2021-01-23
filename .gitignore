@@ -1,3 +1,5 @@
-projet
-projet.lst
-projet.o
+*
+!/**/
+!*.*
+*.lst
+*.o
