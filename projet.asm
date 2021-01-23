@@ -62,59 +62,66 @@ main:
             xor di, di
             
             ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
-			mov ax, 1
-			loop3:
-				nop
-				
-				; inside while loop
-				
+            mov ax, 1
+            loop3:
+                nop
+                
+                ; inside while loop
+                
                 ; tmp = z_r
-                mov [tmp], dword z_r
+                mov r8d, [z_r]
                 
                 ; z_r = z_r * z_r - z_i * z_i + c_r
-				mov eax, [z_r]
-				imul eax, eax
-				mov ebx, [z_i]
-				imul ebx, ebx
-				sub eax, ebx
-				add eax, [c_r]
-				mov [z_r], eax
+                xor eax, eax
+                mov eax, [z_r]
+                imul eax, eax
+                mov ebx, [z_i]
+                imul ebx, ebx
+                sub eax, ebx
+                add eax, [c_r]
+                mov [z_r], eax
                 
                 ; z_i = 2 * z_i * tmp + c_i
+                xor eax, eax
                 mov eax, [z_i]
                 imul eax, 2
-                imul eax, [tmp]
+                imul eax, r8d
                 add eax, [c_i]
-                mov [z_i], eax ; doesn't work
+                mov [z_i], eax
                 
                 
                 ; i++
                 inc di
-				
-				; loop condition
-				; z_r * z_r + z_i * z_i < 4
-				mov eax, [z_r]
-				imul eax, eax
-				mov ebx, [z_i]
-				imul ebx, ebx
-				add eax, ebx
+                
+                ; loop condition
+                ; z_r * z_r + z_i * z_i < 4
+                xor eax, eax
+                mov eax, [z_r]
+                imul eax, eax
+                mov ebx, [z_i]
+                imul ebx, ebx
+                add eax, ebx
 
-                cmp eax, 4
+                cmp eax, dword 4
                 jge loopend
-				
-				; i < iteration_max
-				; ...
-				
-				cmp eax, [iteration_max]
-				jge loopend
+                
+                ; i < iteration_max
+                ; ...
+                
+                cmp di, [iteration_max]
+                jge loopend
+
+                jmp loop3
                 
             loopend:
             
             ; if (i == iteration_max)
             cmp eax, [iteration_max]
             
-                ; draw the pixel at x, y (aka call a function)
-                ;je dessin
+            ; draw the pixel at x, y (aka call a function)
+            ;je dessin
+            
+            continue_loop:
             
             ; y < image_y
             cmp si, [image_y] ; Compare cx to the limit
