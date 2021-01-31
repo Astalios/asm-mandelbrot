@@ -57,7 +57,7 @@ image_x resd 0
 image_y resd 0
 
 section .data
-
+phrase: dd "%d - printf ",10,0
 event:		times	24 dq 0
 
 x1              dd -2.1
@@ -66,6 +66,7 @@ y1              dd -1.2
 y2              dd  1.2
 zoom            dd  100
 iteration_max   dd  50
+
 
 section .text
 	
@@ -93,8 +94,8 @@ mov rdi,qword[display_name]
 mov rsi,rbx
 mov rdx,10
 mov rcx,10
-mov r8,400	; largeur
-mov r9,400	; hauteur
+mov r8,400	; width
+mov r9,400	; height
 push 0xFFFFFF	; background  0xRRGGBB
 push 0x00FF00
 push 1
@@ -134,11 +135,150 @@ je closeDisplay						; on saute au label 'closeDisplay' qui ferme la fenêtre
 jmp boucle
 
 ;#########################################
-;#		DEBUT DE LA ZONE DE DESSIN		 #
+;#     DEBUT DE LA ZONE DE DESSIN	 #
 ;#########################################
+mov rdi,phrase
+movsx rsi,dword[i]
+mov rax,0
+call printf
+drawing:
+; image_x = (x2 - x1) * zoom
+mov eax, [x2]
+sub eax, [x1]
+imul eax, [zoom]
+mov [image_x], eax
+
+; image_y = (y2 - y1) * zoom
+mov eax, [y2]
+sub eax, [y1]
+imul eax, [zoom]
+mov [image_y], eax
+
+; for (x = 0; x < image_x; x++)
+xor cx, cx ; set x to 0
+
+mov rdi,phrase
+movsx rsi,dword[i]
+mov rax,0
+call printf
+
+loop1:
+nop
+; x++
+inc cx
+
+; inside the first loop
+
+; for (y = 0; y < image_y; y++)
+xor si, si
+mov rdi,phrase
+movsx rsi,dword[i]
+mov rax,0
+call printf
+
+loop2:
+nop
+; y++
+inc si
+
+; inside the second loop
+
+; c_r = x / zoom + x1
+mov ax, [x]
+mov bx, [zoom]
+xor dx, dx
+div bx ; ax=résultat(dx:ax/bx), dx=reste(dx:ax/bx) :
+add ax, [x1]
+mov [c_r], ax
+
+; c_i = y / zoom + y1
+mov ax, [y]
+mov bx, [zoom]
+xor dx, dx
+div bx
+add ax, [y1]
+mov [c_i], ax
+
+; z_r = 0
+mov [z_r], dword 0
+
+; z_i = 0
+mov [z_i], dword 0
+
+; i = 0
+mov dword[i], 0
+
+; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
+mov ax, 1
+mov rdi,phrase
+movsx rsi,dword[i]
+mov rax,0
+call printf
+
+loop3:
+nop
+
+; inside while loop
+
+; tmp = z_r
+mov r8d, [z_r]
+
+; z_r = z_r * z_r - z_i * z_i + c_r
+mov eax, 0
+mov eax, [z_r]
+imul eax, eax
+mov ebx, [z_i]
+imul ebx, ebx
+sub eax, ebx
+add eax, [c_r]
+mov [z_r], eax
+
+; z_i = 2 * z_i * tmp + c_i
+xor eax, eax
+mov eax, [z_i]
+imul eax, 2
+imul eax, r8d
+add eax, [c_i]
+mov [z_i], eax
+
+
+; i++
+inc dword[i]
+
+; loop condition
+; z_r * z_r + z_i * z_i < 4
+xor eax, eax
+mov eax, [z_r]
+imul eax, eax
+mov ebx, [z_i]
+imul ebx, ebx
+add eax, ebx
+
+cmp eax, dword 4
+jge loopend
+
+; i < iteration_max
+; ...
+mov eax, dword[i]
+cmp eax, [iteration_max]
+jge loopend
+
+jmp loop3
+
+loopend:
+
+; if (i != iteration_max)
+mov rdi,phrase
+movsx rsi,dword[i]
+mov rax,0
+call printf
+cmp eax, [iteration_max]
+
+; call 'dessin' function if not even
+jne continue_loop
 dessin:
 
-;couleur de la ligne 1
+;line 1 color
 mov rdi,qword[display_name]
 mov rsi,qword[gc]
 mov edx,0xFF0000	; Couleur du crayon ; rouge
@@ -148,144 +288,26 @@ call XSetForeground
 ;mov dword[y1],50
 ;mov dword[x2],200
 ;mov dword[y2],350
-; dessin de la ligne 1
+;dessin de la ligne 1
 mov rdi,qword[display_name]
 mov rsi,qword[window]
 mov rdx,qword[gc]
-mov ecx,dword[x1]	; coordonnée source en x
-mov r8d,dword[y1]	; coordonnée source en y
-mov r9d,dword[x2]	; coordonnée destination en x
-push qword[y2]		; coordonnée destination en y
+movsx ecx,cx	; coordonnée source en x
+movsx r8d,si	; coordonnée source en y
+movsx r9d,cx	; coordonnée destination en x
+push si		; coordonnée destination en y
 call XDrawLine
 
-drawing:
-    ; image_x = (x2 - x1) * zoom
-    mov eax, [x2]
-    sub eax, [x1]
-    imul eax, [zoom]
-    mov [image_x], eax
-    
-    ; image_y = (y2 - y1) * zoom
-    mov eax, [y2]
-    sub eax, [y1]
-    imul eax, [zoom]
-    mov [image_y], eax
-    
-    ; for (x = 0; x < image_x; x++)
-    xor cx, cx ; set x to 0
-    
-    loop1:
-        nop
-        ; x++
-        inc cx
-        
-        ; inside the first loop
-        
-        ; for (y = 0; y < image_y; y++)
-        xor si, si
-        
-        loop2:
-            nop
-            ; y++
-            inc si
-            
-            ; inside the second loop
-            
-            ; c_r = x / zoom + x1
-            mov ax, [x]
-            mov bx, [zoom]
-            xor dx, dx
-            div bx ; ax=résultat(dx:ax/bx), dx=reste(dx:ax/bx) :
-            add ax, [x1]
-            mov [c_r], ax
-            
-            ; c_i = y / zoom + y1
-            mov ax, [y]
-            mov bx, [zoom]
-            xor dx, dx
-            div bx
-            add ax, [y1]
-            mov [c_i], ax
-            
-            ; z_r = 0
-            mov [z_r], dword 0
-            
-            ; z_i = 0
-            mov [z_i], dword 0
-            
-            ; i = 0
-            xor di, di
-            
-            ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
-            mov ax, 1
-            loop3:
-                nop
-                
-                ; inside while loop
-                
-                ; tmp = z_r
-                mov r8d, [z_r]
-                
-                ; z_r = z_r * z_r - z_i * z_i + c_r
-                xor eax, eax
-                mov eax, [z_r]
-                imul eax, eax
-                mov ebx, [z_i]
-                imul ebx, ebx
-                sub eax, ebx
-                add eax, [c_r]
-                mov [z_r], eax
-                
-                ; z_i = 2 * z_i * tmp + c_i
-                xor eax, eax
-                mov eax, [z_i]
-                imul eax, 2
-                imul eax, r8d
-                add eax, [c_i]
-                mov [z_i], eax
-                
-                
-                ; i++
-                inc di
-                
-                ; loop condition
-                ; z_r * z_r + z_i * z_i < 4
-                xor eax, eax
-                mov eax, [z_r]
-                imul eax, eax
-                mov ebx, [z_i]
-                imul ebx, ebx
-                add eax, ebx
+continue_loop:
 
-                cmp eax, dword 4
-                jge loopend
-                
-                ; i < iteration_max
-                ; ...
-                
-                cmp di, [iteration_max]
-                jge loopend
+; y < image_y
+cmp si, [image_y] ; Compare cx to the limit
+jle loop2
 
-                jmp loop3
-                
-            loopend:
-            
-            ; if (i == iteration_max)
-            cmp eax, [iteration_max]
-            
-            ; draw the pixel at x, y (aka call a function)
-            je dessin
-            
-            continue_loop:
-            
-            ; y < image_y
-            cmp si, [image_y] ; Compare cx to the limit
-            jle loop2
-            
-        
-        ; x < image_x
-        cmp cx, [image_x] ; Compare cx to the limit
-        jle loop1
+
+; x < image_x
+cmp cx, [image_x] ; Compare cx to the limit
+jle loop1
 
 ; ############################
 ; # FIN DE LA ZONE DE DESSIN #
@@ -300,9 +322,9 @@ mov rax,34
 syscall
 
 closeDisplay:
-    mov     rax,qword[display_name]
-    mov     rdi,rax
-    call    XCloseDisplay
-    xor	    rdi,rdi
-    call    exit
+mov     rax,qword[display_name]
+mov     rdi,rax
+call    XCloseDisplay
+xor	    rdi,rdi
+call    exit
 	
