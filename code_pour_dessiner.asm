@@ -69,6 +69,8 @@ y2              dd  1.2
 zoom            dd  100
 iteration_max   dd  50
 
+two             dd  2
+
 section .text
 	
 ;##################################################
@@ -226,25 +228,23 @@ drawing:
                 ; inside while loop
                 
                 ; tmp = z_r
-                mov r12d, [z_r]
+                movss XMM4, dword [z_r]
                 
                 ; z_r = z_r * z_r - z_i * z_i + c_r
-                xor eax, eax
-                mov eax, [z_r]
-                imul eax, eax
-                mov ebx, [z_i]
-                imul ebx, ebx
-                sub eax, ebx
-                add eax, [c_r]
-                mov [z_r], eax
+                movss XMM0, dword [z_r]
+                mulss XMM0, XMM0
+                movss XMM1, dword [z_i]
+                mulss XMM1, XMM1
+                subss XMM0, XMM1
+                addss XMM0, dword [c_r]
+                movss dword [z_r], XMM0
                 
                 ; z_i = 2 * z_i * tmp + c_i
-                xor eax, eax
-                mov eax, [z_i]
-                imul eax, 2
-                imul eax, r12d
-                add eax, [c_i]
-                mov [z_i], eax
+                movss XMM3, dword [z_i]
+                mulss XMM3, dword [two]
+                mulss XMM3, XMM4
+                addss XMM3, dword [c_i]
+                movss dword [z_i], XMM3
                 
                 
                 ; i++
