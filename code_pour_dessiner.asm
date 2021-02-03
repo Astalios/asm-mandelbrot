@@ -249,6 +249,7 @@ drawing:
                 ; i++
                 inc dword [i]
                 
+
                 ; loop condition
                 ; z_r * z_r + z_i * z_i < 4
                 movss XMM5, dword [z_r]
@@ -258,7 +259,7 @@ drawing:
                 addss XMM5, XMM6
 
                 ucomiss XMM5, dword [four]
-                jge loopend
+                jle loopend
                 
                 ; i < iteration_max
                 ; ...
