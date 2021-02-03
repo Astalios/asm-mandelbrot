@@ -197,26 +197,24 @@ drawing:
             ; inside the second loop
             
             ; c_r = x / zoom + x1
-            mov ax, [x]
-            mov bx, [zoom]
-            xor dx, dx
-            div bx ; ax=résultat(dx:ax/bx), dx=reste(dx:ax/bx) :
-            add ax, [x1]
-            mov [c_r], ax
+            movss XMM7, dword [x]
+            movss XMM8, dword [zoom]
+            divss XMM7, XMM8
+            addss XMM7, dword [x1]
+            movss dword [c_r], XMM7
             
             ; c_i = y / zoom + y1
-            mov ax, [y]
-            mov bx, [zoom]
-            xor dx, dx
-            div bx
-            add ax, [y1]
-            mov [c_i], ax
+            movss XMM9, dword [y]
+            movss XMM10, dword [zoom]
+            divss XMM9, XMM10
+            addss XMM9, dword [y1]
+            movss dword [c_i], XMM9
             
             ; z_r = 0
-            mov [z_r], dword 0
+            mov dword [z_r], 0
             
             ; z_i = 0
-            mov [z_i], dword 0
+            mov dword [z_i], 0
             
             ; i = 0
             mov dword [i], 0
