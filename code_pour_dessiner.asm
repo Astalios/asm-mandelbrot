@@ -39,11 +39,8 @@ depth:         	resd	1
 connection:    	resd	1
 width:         	resd	1
 height:        	resd	1
-window:		resq	1
-gc:		resq	1
-
-x       resd 0
-y       resd 0
+window:		    resq	1
+gc:		        resq	1
 
 c_r     resd 0
 c_i     resd 0
@@ -58,7 +55,12 @@ image_y resd 0
 
 section .data
 
+print_test: db " %d ",0
+
 event:		times	24 dq 0
+
+x               dd  0
+y               dd  0
 
 x1              dd -2.1
 x2              dd  0.6
@@ -141,22 +143,22 @@ dessin:
 ;couleur de la ligne 1
 mov rdi,qword[display_name]
 mov rsi,qword[gc]
-mov edx,0xFF0000	; Couleur du crayon ; rouge
+mov edx,0x000000	; Couleur du crayon
 call XSetForeground
 ; coordonnées de la ligne 1
-;mov dword[x1],50
-;mov dword[y1],50
-;mov dword[x2],200
-;mov dword[y2],350
+;mov dword[x],50
+;mov dword[y],50
 ; dessin de la ligne 1
 mov rdi,qword[display_name]
 mov rsi,qword[window]
 mov rdx,qword[gc]
-mov ecx,dword[x1]	; coordonnée source en x
-mov r8d,dword[y1]	; coordonnée source en y
-mov r9d,dword[x2]	; coordonnée destination en x
-push qword[y2]		; coordonnée destination en y
+mov ecx,dword[x]	; coordonnée source en x
+mov r8d,dword[y]	; coordonnée source en y
+mov r9d,dword[x]	; coordonnée destination en x
+push qword[y]		; coordonnée destination en y
 call XDrawLine
+
+jmp continue_loop
 
 drawing:
     ; image_x = (x2 - x1) * zoom
@@ -172,22 +174,22 @@ drawing:
     mov [image_y], eax
     
     ; for (x = 0; x < image_x; x++)
-    xor cx, cx ; set x to 0
+    mov dword [x], 0 ; set x to 0
     
     loop1:
         nop
         ; x++
-        inc cx
+        inc dword [x]
         
         ; inside the first loop
         
         ; for (y = 0; y < image_y; y++)
-        xor si, si
+        mov dword [y], 0
         
         loop2:
             nop
             ; y++
-            inc si
+            inc dword [y]
             
             ; inside the second loop
             
@@ -214,7 +216,7 @@ drawing:
             mov [z_i], dword 0
             
             ; i = 0
-            xor di, di
+            xor r9, r9
             
             ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
             mov ax, 1
@@ -224,7 +226,7 @@ drawing:
                 ; inside while loop
                 
                 ; tmp = z_r
-                mov r8d, [z_r]
+                mov r12d, [z_r]
                 
                 ; z_r = z_r * z_r - z_i * z_i + c_r
                 xor eax, eax
@@ -240,13 +242,13 @@ drawing:
                 xor eax, eax
                 mov eax, [z_i]
                 imul eax, 2
-                imul eax, r8d
+                imul eax, r12d
                 add eax, [c_i]
                 mov [z_i], eax
                 
                 
                 ; i++
-                inc di
+                inc r9
                 
                 ; loop condition
                 ; z_r * z_r + z_i * z_i < 4
@@ -263,7 +265,7 @@ drawing:
                 ; i < iteration_max
                 ; ...
                 
-                cmp di, [iteration_max]
+                cmp r9, [iteration_max]
                 jge loopend
 
                 jmp loop3
@@ -271,20 +273,20 @@ drawing:
             loopend:
             
             ; if (i == iteration_max)
-            cmp eax, [iteration_max]
-            
-            ; draw the pixel at x, y (aka call a function)
-            je dessin
+            cmp r9, [iteration_max]
+            je dessin ; draw the pixel at x, y (aka call a function)
             
             continue_loop:
             
             ; y < image_y
-            cmp si, [image_y] ; Compare cx to the limit
+            mov eax, [y]
+            cmp eax, [image_y] ; Compare cx to the limit
             jle loop2
             
         
         ; x < image_x
-        cmp cx, [image_x] ; Compare cx to the limit
+        mov eax, [x]
+        cmp eax, [image_x] ; Compare cx to the limit
         jle loop1
 
 ; ############################
