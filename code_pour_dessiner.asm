@@ -70,6 +70,7 @@ zoom            dd  100
 iteration_max   dd  50
 
 two             dd  2
+four            dd  4
 
 section .text
 	
@@ -252,14 +253,13 @@ drawing:
                 
                 ; loop condition
                 ; z_r * z_r + z_i * z_i < 4
-                xor eax, eax
-                mov eax, [z_r]
-                imul eax, eax
-                mov ebx, [z_i]
-                imul ebx, ebx
-                add eax, ebx
+                movss XMM5, dword [z_r]
+                mulss XMM5, XMM5
+                movss XMM6, dword [z_i]
+                mulss XMM6, XMM6
+                addss XMM5, XMM6
 
-                cmp eax, dword 4
+                ucomiss XMM5, dword [four]
                 jge loopend
                 
                 ; i < iteration_max
