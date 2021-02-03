@@ -219,8 +219,8 @@ drawing:
             mov [z_i], dword 0
             
             ; i = 0
-            xor r9, r9
-            
+            mov dword [i], 0
+
             ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
             mov ax, 1
             loop3:
@@ -249,7 +249,7 @@ drawing:
                 
                 
                 ; i++
-                inc r9
+                inc dword [i]
                 
                 ; loop condition
                 ; z_r * z_r + z_i * z_i < 4
@@ -265,7 +265,8 @@ drawing:
                 ; i < iteration_max
                 ; ...
                 
-                cmp r9, [iteration_max]
+                mov eax, dword [i]
+                cmp eax, dword [iteration_max]
                 jge loopend
 
                 jmp loop3
@@ -273,20 +274,21 @@ drawing:
             loopend:
             
             ; if (i == iteration_max)
-            cmp r9, [iteration_max]
+            mov eax, dword [i]
+            cmp eax, dword [iteration_max]
             je dessin ; draw the pixel at x, y (aka call a function)
             
             continue_loop:
             
             ; y < image_y
-            mov eax, [y]
-            cmp eax, [image_y] ; Compare cx to the limit
+            mov eax, dword [y]
+            cmp eax, dword [image_y] ; Compare cx to the limit
             jle loop2
             
         
         ; x < image_x
-        mov eax, [x]
-        cmp eax, [image_x] ; Compare cx to the limit
+        mov eax, dword [x]
+        cmp eax, dword [image_x] ; Compare cx to the limit
         jle loop1
 
 ; ############################
