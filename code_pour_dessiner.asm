@@ -67,6 +67,8 @@ y2              dd  1.2
 zoom            dd  100
 iteration_max   dd  50
 
+two             dd  2
+four            dd  4
 
 section .text
 	
@@ -137,26 +139,31 @@ jmp boucle
 ;#########################################
 ;#     DEBUT DE LA ZONE DE DESSIN	 #
 ;#########################################
+
+; printf de i
 mov rdi,phrase
 movsx rsi,dword[i]
 mov rax,0
 call printf
+
+
 drawing:
 ; image_x = (x2 - x1) * zoom
-mov eax, [x2]
-sub eax, [x1]
-imul eax, [zoom]
-mov [image_x], eax
+mov eax, dword [x2]
+sub eax, dword [x1]
+imul eax, dword [zoom]
+mov dword [image_x], eax
 
 ; image_y = (y2 - y1) * zoom
-mov eax, [y2]
-sub eax, [y1]
-imul eax, [zoom]
-mov [image_y], eax
+mov eax, dword [y2]
+sub eax, dword [y1]
+imul eax, dword [zoom]
+mov dword [image_y], eax
 
 ; for (x = 0; x < image_x; x++)
-xor cx, cx ; set x to 0
+mov dword [x], 0 ; set x to 0
 
+; printf de i
 mov rdi,phrase
 movsx rsi,dword[i]
 mov rax,0
@@ -165,12 +172,14 @@ call printf
 loop1:
 nop
 ; x++
-inc cx
+inc dword [x]
 
 ; inside the first loop
 
 ; for (y = 0; y < image_y; y++)
-xor si, si
+mov dword [y], 0
+
+; printf de i
 mov rdi,phrase
 movsx rsi,dword[i]
 mov rax,0
@@ -179,37 +188,37 @@ call printf
 loop2:
 nop
 ; y++
-inc si
+inc dword [y]
 
 ; inside the second loop
 
 ; c_r = x / zoom + x1
-mov ax, [x]
-mov bx, [zoom]
-xor dx, dx
-div bx ; ax=résultat(dx:ax/bx), dx=reste(dx:ax/bx) :
-add ax, [x1]
-mov [c_r], ax
+movss XMM7, dword [x]
+movss XMM8, dword [zoom]
+divss XMM7, XMM8
+addss XMM7, dword [x1]
+movss dword [c_r], XMM7
 
 ; c_i = y / zoom + y1
-mov ax, [y]
-mov bx, [zoom]
-xor dx, dx
-div bx
-add ax, [y1]
-mov [c_i], ax
+movss XMM9, dword [y]
+movss XMM10, dword [zoom]
+divss XMM9, XMM10
+addss XMM9, dword [y1]
+movss dword [c_i], XMM9
 
 ; z_r = 0
-mov [z_r], dword 0
+mov dword [z_r], 0
 
 ; z_i = 0
-mov [z_i], dword 0
+mov dword [z_i], 0
 
 ; i = 0
-mov dword[i], 0
+mov dword [i], 0
 
 ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
 mov ax, 1
+
+; printf de i
 mov rdi,phrase
 movsx rsi,dword[i]
 mov rax,0
@@ -221,25 +230,23 @@ nop
 ; inside while loop
 
 ; tmp = z_r
-mov r8d, [z_r]
+movss XMM4, dword [z_r]
 
 ; z_r = z_r * z_r - z_i * z_i + c_r
-mov eax, 0
-mov eax, [z_r]
-imul eax, eax
-mov ebx, [z_i]
-imul ebx, ebx
-sub eax, ebx
-add eax, [c_r]
-mov [z_r], eax
+movss XMM0, dword [z_r]
+mulss XMM0, XMM0
+movss XMM1, dword [z_i]
+mulss XMM1, XMM1
+subss XMM0, XMM1
+addss XMM0, dword [c_r]
+movss dword [z_r], XMM0
 
 ; z_i = 2 * z_i * tmp + c_i
-xor eax, eax
-mov eax, [z_i]
-imul eax, 2
-imul eax, r8d
-add eax, [c_i]
-mov [z_i], eax
+movss XMM3, dword [z_i]
+mulss XMM3, dword [two]
+mulss XMM3, XMM4
+addss XMM3, dword [c_i]
+movss dword [z_i], XMM3
 
 
 ; i++
@@ -247,35 +254,39 @@ inc dword[i]
 
 ; loop condition
 ; z_r * z_r + z_i * z_i < 4
-xor eax, eax
-mov eax, [z_r]
-imul eax, eax
-mov ebx, [z_i]
-imul ebx, ebx
-add eax, ebx
+movss XMM5, dword [z_r]
+mulss XMM5, XMM5
+movss XMM6, dword [z_i]
+mulss XMM6, XMM6
+addss XMM5, XMM6
 
-cmp eax, dword 4
-jge loopend
+ucomiss XMM5, dword [four]
+jle loopend
 
 ; i < iteration_max
 ; ...
-mov eax, dword[i]
-cmp eax, [iteration_max]
+
+mov eax, dword [i]
+cmp eax, dword [iteration_max]
 jge loopend
 
 jmp loop3
 
 loopend:
 
-; if (i != iteration_max)
+; printf de i
 mov rdi,phrase
 movsx rsi,dword[i]
 mov rax,0
 call printf
-cmp eax, [iteration_max]
+
+; if (i != iteration_max)
+mov eax, dword [i]
+cmp eax, dword [iteration_max]
 
 ; call 'dessin' function if not even
 jne continue_loop
+
 dessin:
 
 ;line 1 color
@@ -292,21 +303,22 @@ call XSetForeground
 mov rdi,qword[display_name]
 mov rsi,qword[window]
 mov rdx,qword[gc]
-movsx ecx,cx	; coordonnée source en x
-movsx r8d,si	; coordonnée source en y
-movsx r9d,cx	; coordonnée destination en x
-push si		; coordonnée destination en y
+mov ecx,dword[x]	; coordonnée source en x
+mov r8d,dword[y]	; coordonnée source en y
+mov r9d,dword[x]	; coordonnée destination en x
+push qword[y]		; coordonnée destination en y
 call XDrawLine
 
 continue_loop:
 
 ; y < image_y
-cmp si, [image_y] ; Compare cx to the limit
+mov eax, dword [y]
+cmp eax, dword [image_y] ; Compare cx to the limit
 jle loop2
 
-
 ; x < image_x
-cmp cx, [image_x] ; Compare cx to the limit
+mov eax, dword [x]
+cmp eax, dword [image_x] ; Compare cx to the limit
 jle loop1
 
 ; ############################
