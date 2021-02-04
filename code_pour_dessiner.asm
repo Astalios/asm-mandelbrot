@@ -324,4 +324,3 @@ mov     rdi,rax
 call    XCloseDisplay
 xor	    rdi,rdi
 call    exit
-	

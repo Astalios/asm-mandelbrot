@@ -1,3 +1,33 @@
+extern printf
+
+
+section .data
+    x1:             dq -2.1
+    x2:             dq  0.6
+    y1:             dq -1.2
+    y2:             dq  1.2
+    zoom:           dq  100
+    iteration_max:  dq  50
+    pi:             dq  3.14159
+
+    print_test:     db " %f ",0
+
+
+segment .bss
+    x       resq 0
+    y       resq 0
+
+    c_r     resq 0
+    c_i     resq 0
+    z_r     resq 0
+    z_i     resq 0
+    i       resq 0
+    
+    tmp     resq 0
+
+    image_x resq 0
+    image_y resq 0
+
 section .text
 
 global main
@@ -5,16 +35,21 @@ global main
 
 main:
     ; image_x = (x2 - x1) * zoom
-    mov eax, [x2]
-    sub eax, [x1]
-    imul eax, [zoom]
-    mov [image_x], eax
+    movsx rax, qword[x2]
+    sub rax, qword[x1]
+    imul rax, qword[zoom]
+    movsx [image_x], rax
     
     ; image_y = (y2 - y1) * zoom
-    mov eax, [y2]
+    movsx eax, [y2]
     sub eax, [y1]
     imul eax, [zoom]
-    mov [image_y], eax
+    movsx [image_y], eax
+
+    movsx rdi,print_test
+    movsx rsi,0
+    movsx rax,word[pi]
+    call printf
     
     ; for (x = 0; x < image_x; x++)
     xor cx, cx ; set x to 0
@@ -37,57 +72,57 @@ main:
             ; inside the second loop
             
             ; c_r = x / zoom + x1
-            mov ax, [x]
-            mov bx, [zoom]
+            movsx ax, [x]
+            movsx bx, [zoom]
             xor dx, dx
             div bx ; ax=résultat(dx:ax/bx), dx=reste(dx:ax/bx) :
             add ax, [x1]
-            mov [c_r], ax
+            movsx [c_r], ax
             
             ; c_i = y / zoom + y1
-            mov ax, [y]
-            mov bx, [zoom]
+            movsx ax, [y]
+            movsx bx, [zoom]
             xor dx, dx
             div bx
             add ax, [y1]
-            mov [c_i], ax
+            movsx [c_i], ax
             
             ; z_r = 0
-            mov [z_r], dword 0
+            movsx [z_r], dword 0
             
             ; z_i = 0
-            mov [z_i], dword 0
+            movsx [z_i], dword 0
             
             ; i = 0
             xor di, di
             
             ; while (z_r * z_r + z_i * z_i < 4 && i < iteration_max)
-            mov ax, 1
+            movsx ax, 1
             loop3:
                 nop
                 
                 ; inside while loop
                 
                 ; tmp = z_r
-                mov r8d, [z_r]
+                movsx r8d, [z_r]
                 
                 ; z_r = z_r * z_r - z_i * z_i + c_r
                 xor eax, eax
-                mov eax, [z_r]
+                movsx eax, [z_r]
                 imul eax, eax
-                mov ebx, [z_i]
+                movsx ebx, [z_i]
                 imul ebx, ebx
                 sub eax, ebx
                 add eax, [c_r]
-                mov [z_r], eax
+                movsx [z_r], eax
                 
                 ; z_i = 2 * z_i * tmp + c_i
                 xor eax, eax
-                mov eax, [z_i]
+                movsx eax, [z_i]
                 imul eax, 2
                 imul eax, r8d
                 add eax, [c_i]
-                mov [z_i], eax
+                movsx [z_i], eax
                 
                 
                 ; i++
@@ -96,9 +131,9 @@ main:
                 ; loop condition
                 ; z_r * z_r + z_i * z_i < 4
                 xor eax, eax
-                mov eax, [z_r]
+                movsx eax, [z_r]
                 imul eax, eax
-                mov ebx, [z_i]
+                movsx ebx, [z_i]
                 imul ebx, ebx
                 add eax, ebx
 
@@ -131,28 +166,3 @@ main:
         ; x < image_x
         cmp cx, [image_x] ; Compare cx to the limit
         jle loop1
-    
-
-section .data
-    x1              dd -2.1
-    x2              dd  0.6
-    y1              dd -1.2
-    y2              dd  1.2
-    zoom            dd  100
-    iteration_max   dd  50
-
-
-segment .bss
-    x       resd 0
-    y       resd 0
-
-    c_r     resd 0
-    c_i     resd 0
-    z_r     resd 0
-    z_i     resq 0
-    i       resd 0
-    
-    tmp     resd 0
-
-    image_x resd 0
-    image_y resd 0
